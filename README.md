@@ -142,4 +142,3 @@ Golum_Front/
 - 라우팅은 `react-router-dom`이 아니라 `App.jsx`의 `page` 상태로 처리합니다.
 - 앱에서 사용하는 이미지는 `src/assets/` 아래에 있어야 Vite 번들에 포함됩니다.
 - `node_modules/`, `dist/`는 커밋하지 않습니다.
-- 상세한 프로젝트 규칙과 파일별 책임은 `AGENTS.md`에 정리되어 있습니다.
