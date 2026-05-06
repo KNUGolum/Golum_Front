@@ -12,6 +12,7 @@ import packman2 from "../assets/packman2.png";
 import packman3 from "../assets/packman3.png";
 import packman4 from "../assets/packman4.png";
 import packman5 from "../assets/packman5.png";
+import golumLogo from "../assets/golum.png";
 
 const PACKMAN_FRAMES = [packman1, packman2, packman3, packman4, packman5, packman4, packman3, packman2];
 const PACKMAN_GLYPHS = {
@@ -376,8 +377,23 @@ export function AuthPage({ onLogin }) {
         <img src={packFrame} alt="" />
       </div>
       <ArcadePanel style={{ width: "100%", maxWidth: 430, padding: 28, position: "relative", zIndex: 1, marginTop: 120 }} innerStyle={{ padding: "10px 4px 4px" }}>
-        <div style={{ textAlign: "center", fontSize: 40, fontWeight: 900, color: T.gold, letterSpacing: 4, marginBottom: 4, textShadow: `3px 3px 0 ${T.danger}, -3px -3px 0 ${T.primary}` }}>
-          GOLUM
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 4 }}>
+          <img
+            src={golumLogo}
+            alt=""
+            aria-hidden="true"
+            style={{
+              width: 40,
+              height: 40,
+              objectFit: "contain",
+              imageRendering: "pixelated",
+              filter: "drop-shadow(3px 3px 0 #000) drop-shadow(0 0 10px rgba(255,231,92,0.28))",
+              flexShrink: 0,
+            }}
+          />
+          <div style={{ fontSize: 40, fontWeight: 900, color: T.gold, letterSpacing: 4, textShadow: `3px 3px 0 ${T.danger}, -3px -3px 0 ${T.primary}` }}>
+            GOLUM
+          </div>
         </div>
         <p style={{ textAlign: "center", color: T.primary, fontSize: 12, marginBottom: 24, fontWeight: 900 }}>PRESS START - VOTE & BET</p>
 

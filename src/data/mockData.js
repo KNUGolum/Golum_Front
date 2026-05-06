@@ -26,8 +26,8 @@ export const MOCK_VOTES = [
         winner: null,
         votesA: 47,
         votesB: 31,
-        totalBetA: 3200,
-        totalBetB: 1800,
+        totalBetA: 5200,
+        totalBetB: 3400,
     },
     // 더 많은 데이터를 추가해도 좋습니다.
     {
@@ -60,8 +60,8 @@ export const MOCK_VOTES = [
         winner: "A",
         votesA: 89,
         votesB: 52,
-        totalBetA: 12000,
-        totalBetB: 6500,
+        totalBetA: 9300,
+        totalBetB: 5400,
     },
     {
         id: 3,
@@ -78,8 +78,8 @@ export const MOCK_VOTES = [
         winner: null,
         votesA: 124,
         votesB: 98,
-        totalBetA: 18500,
-        totalBetB: 14200,
+        totalBetA: 14800,
+        totalBetB: 12600,
     },
     {
         id: 4,
@@ -96,7 +96,7 @@ export const MOCK_VOTES = [
         winner: null,
         votesA: 33,
         votesB: 41,
-        totalBetA: 2100,
-        totalBetB: 2900,
+        totalBetA: 2800,
+        totalBetB: 3600,
     },
 ];

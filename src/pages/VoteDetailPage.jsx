@@ -21,7 +21,7 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
 
   // [통계 계산]
   const ra = rateA(vote);       // 투표율 (A진영 %)
-  const bra = betRateA(vote);   // 배팅 비율 (A진영 %)
+  const bra = betRateA(vote);   // 배팅 게이지 폭 계산용 비율
   const total = vote.votesA + vote.votesB;
   const totalB = vote.totalBetA + vote.totalBetB;
 
@@ -137,10 +137,10 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
             </div>
             {/* 배팅 현황 */}
               <div style={{ borderTop: `3px solid ${T.border}`, paddingTop: 12 }}>
-              <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontWeight: 700 }}>배팅 금액 현황</div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 11 }}>
-                <span style={{ color: T.primary }}>{bra}%</span>
-                <span style={{ color: T.danger }}>{100 - bra}%</span>
+              <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontWeight: 700 }}>배팅 크레딧 현황</div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 11, fontWeight: 900 }}>
+                <span style={{ color: T.primary }}>{vote.optA} {vote.totalBetA.toLocaleString()} C</span>
+                <span style={{ color: T.danger }}>{vote.totalBetB.toLocaleString()} C {vote.optB}</span>
               </div>
               <div style={{ height: 9, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `2px solid ${T.border}` }}>
                 <div style={{ height: "100%", width: `${bra}%`, background: T.accent, borderRadius: T.radiusSm }} />
