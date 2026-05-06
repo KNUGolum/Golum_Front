@@ -6,7 +6,7 @@ import { ArcadePanel } from "../components/common/ArcadePanel";
 import { useToast } from "../context/ToastContext";
 import { timeAgo, timeLeft, rateA, betRateA, delay } from "../utils/helpers";
 
-export function VoteDetailPage({ vote, user, onVoted, nav }) {
+export function VoteDetailPage({ vote, user, onVoted, onBetSkip, nav }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [now] = useState(() => Date.now());
@@ -16,7 +16,7 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
   const myP = vote.participants.find(p => p.email === user.email); // 내 투표 기록
   const myB = vote.bets.find(b => b.email === user.email);         // 내 배팅 기록
   const active = vote.status === "active" && vote.expiresAt > now; // 진행 여부
-  const canSee = !!myP || vote.status === "closed";               // 결과 공개 여부
+  const canSee = !!myB || vote.status === "closed"; // 결과 공개 여부
   const creator = vote.creator === user.email;                    // 내가 만든 투표인지 확인
 
   // [통계 계산]
@@ -48,6 +48,30 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
     
     onVoted(nextVote, nextUser); // 부모 컴포넌트 데이터 갱신
     // setTimeout(() => nav("bet", vote.id), 700); // 0.7초 후 배팅 페이지로 이동
+  }
+
+  function skipBetting() {
+    if (!myP) { toast("투표 참여 후 배팅을 포기할 수 있습니다.", "error"); return; }
+    if (myB) { return; }
+
+    const skippedAt = Number(new Date());
+    const nextVote = {
+      ...vote,
+      bets: [
+        ...vote.bets,
+        {
+          email: user.email,
+          choice: myP.choice,
+          amount: 0,
+          result: "skipped",
+          payout: 0,
+          placedAt: skippedAt,
+        },
+      ],
+    };
+
+    toast("배팅을 포기했습니다. 결과를 확인할 수 있습니다.", "info");
+    onBetSkip(nextVote);
   }
 
   return (
@@ -119,7 +143,12 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
 
       {/* 안내 문구 및 배팅 유도 버튼 */}
       {!myP && active && !creator && <div style={{ textAlign: "center", fontSize: 12, color: T.primary, marginBottom: 14, padding: "10px", background: "rgba(5,0,23,0.72)", border: `2px solid ${T.primary}`, borderRadius: 4, boxShadow: "inset 0 0 14px rgba(0,255,234,0.12)" }}>진영 선택 시 +50 크레딧 지급</div>}
-      {myP && !myB && active && <div style={{ textAlign: "center", marginBottom: 14 }}><Button v="gold" onClick={() => nav("bet", vote.id)}>💰 배팅하러 가기</Button></div>}
+      {myP && !myB && active && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <Button v="gold" onClick={() => nav("bet", vote.id)}>💰 배팅하러 가기</Button>
+          <Button v="outline" onClick={skipBetting}>배팅 참여 안하기</Button>
+        </div>
+      )}
 
       {/* 결과 섹션: 투표 및 배팅 통계 */}
       <ArcadePanel style={{ marginBottom: 14 }} innerStyle={{ padding: "6px 4px" }}>
@@ -160,7 +189,7 @@ export function VoteDetailPage({ vote, user, onVoted, nav }) {
           <div style={{ background: "rgba(5,0,23,0.68)", border: `2px dashed ${T.border}`, borderRadius: 5, padding: 28, textAlign: "center", color: T.muted }}>
             <div style={{ fontSize: 28, marginBottom: 6 }}>LOCK</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>결과 비공개</div>
-            <div style={{ fontSize: 11 }}>투표에 참여하면 실시간 결과를 확인할 수 있습니다.</div>
+            <div style={{ fontSize: 11 }}>배팅에 참여하거나 배팅을 포기하면 실시간 결과를 확인할 수 있습니다.</div>
           </div>
         )}
       </ArcadePanel>

@@ -6,7 +6,9 @@ import { ArcadePanel } from "../components/common/ArcadePanel";
 import { useToast } from "../context/ToastContext";
 import { delay } from "../utils/helpers";
 
-export function BettingPage({ vote, user, onBet, onSkip }) {
+const MIN_BET_AMOUNT = 1;
+
+export function BettingPage({ vote, user, onBet, onBack, onSkip }) {
   const toast = useToast();
   
   // [데이터 분석] 내 투표 정보 가져오기
@@ -20,14 +22,20 @@ export function BettingPage({ vote, user, onBet, onSkip }) {
   const MAX = Math.max(user.credits, 0); // 보유 크레딧이 0 미만으로 떨어지는 것 방지
   const QUICK = [50, 100, 300, 500, 1000].filter(a => a <= MAX); // 보유액 내의 퀵 버튼만 표시
   const payout = Math.floor(amt * 1.5); // 승리 시 1.5배 배당
+  const canBet = MAX >= MIN_BET_AMOUNT;
+  const clampBet = (value) => Math.max(MIN_BET_AMOUNT, Math.min(MAX, value || MIN_BET_AMOUNT));
 
   const myLabel = myP?.choice === "A" ? vote.optA : vote.optB;
   const myCol = myP?.choice === "A" ? T.primary : T.danger;
 
   // [로직] 배팅 실행 함수
   async function doBet() {
-    if (amt <= 0) {
-      toast("배팅 금액을 입력해주세요.", "error");
+    if (!myP) {
+      toast("투표 참여 후 배팅할 수 있습니다.", "error");
+      return;
+    }
+    if (amt < MIN_BET_AMOUNT) {
+      toast("최소 배팅 금액은 1 C입니다.", "error");
       return;
     }
     if (amt > user.credits) {
@@ -60,10 +68,38 @@ export function BettingPage({ vote, user, onBet, onSkip }) {
     onBet(nextVote, nextUser); // 데이터 갱신 후 상세 페이지로 이동
   }
 
+  function skipBetting() {
+    if (!myP) {
+      toast("투표 참여 후 배팅을 포기할 수 있습니다.", "error");
+      return;
+    }
+    const existingBet = vote.bets.find(b => b.email === user.email);
+    const skippedAt = Number(new Date());
+    const nextVote = existingBet
+      ? vote
+      : {
+          ...vote,
+          bets: [
+            ...vote.bets,
+            {
+              email: user.email,
+              choice: myP.choice,
+              amount: 0,
+              result: "skipped",
+              payout: 0,
+              placedAt: skippedAt,
+            },
+          ],
+        };
+
+    toast("배팅을 포기했습니다. 결과를 확인할 수 있습니다.", "info");
+    onSkip(nextVote);
+  }
+
   return (
     <div style={{ padding: "20px 16px 80px", maxWidth: 600, margin: "0 auto" }}>
-      <button onClick={onSkip} style={{ background: "none", border: "none", color: T.text2, cursor: "pointer", fontSize: 13, marginBottom: 14, fontFamily: T.font }}>
-        ← 상세로
+      <button onClick={onBack} style={{ background: "none", border: "none", color: T.text2, cursor: "pointer", fontSize: 13, marginBottom: 14, fontFamily: T.font }}>
+        ← 투표 상세로 돌아가기
       </button>
 
       <ArcadePanel style={{ marginBottom: 14, borderColor: "rgba(255,231,92,0.82)", boxShadow: "0 0 4px rgba(255,231,92,0.92), 0 0 16px rgba(255,231,92,0.44), 0 0 34px rgba(255,43,214,0.22), inset 0 0 32px rgba(123,61,255,0.3)" }}>
@@ -96,9 +132,9 @@ export function BettingPage({ vote, user, onBet, onSkip }) {
           <input 
             type="number" 
             value={amt} 
-            min={1} 
-            max={MAX} 
-            onChange={e => setAmt(Math.max(1, Math.min(MAX, parseInt(e.target.value) || 0)))}
+            min={MIN_BET_AMOUNT} 
+            max={Math.max(MAX, MIN_BET_AMOUNT)} 
+            onChange={e => setAmt(clampBet(parseInt(e.target.value, 10)))}
             style={{
               width: "100%", background: "rgba(5,0,23,0.76)", border: `2px solid ${T.gold}`,
               borderRadius: 4, padding: "12px 50px 12px 14px",
@@ -112,15 +148,16 @@ export function BettingPage({ vote, user, onBet, onSkip }) {
         {/* 금액 조절 슬라이더 */}
         <input 
           type="range" 
-          min={1} 
-          max={Math.max(MAX, 1)} 
+          min={MIN_BET_AMOUNT} 
+          max={Math.max(MAX, MIN_BET_AMOUNT)} 
           value={amt} 
-          onChange={e => setAmt(parseInt(e.target.value))}
+          onChange={e => setAmt(clampBet(parseInt(e.target.value, 10)))}
           style={{ width: "100%", margin: "10px 0", accentColor: T.gold }}
         />
 
         <div style={{ textAlign: "right", fontSize: 11, color: T.text2, marginBottom: 14, fontWeight: 800 }}>
           보유: <span style={{ color: T.gold, fontWeight: 900 }}>{user.credits.toLocaleString()} C</span>
+          <span style={{ marginLeft: 8 }}>최소: <span style={{ color: T.gold, fontWeight: 900 }}>{MIN_BET_AMOUNT} C</span></span>
         </div>
 
         {/* 퀵 버튼 및 전체 배팅 버튼 */}
@@ -161,13 +198,13 @@ export function BettingPage({ vote, user, onBet, onSkip }) {
           <div style={{ fontSize: 10, color: T.text2, marginTop: 2 }}>(+100 C 배팅 참여 보상 별도 지급)</div>
         </div>
 
-        <Button v="gold" full onClick={doBet} disabled={loading || amt === 0 || amt > user.credits}>
+        <Button v="gold" full onClick={doBet} disabled={loading || !canBet || amt < MIN_BET_AMOUNT || amt > user.credits}>
           {loading ? "처리 중..." : `${amt.toLocaleString()} C 배팅하기`}
         </Button>
 
         <div style={{ marginTop: 10, textAlign: "center" }}>
-          <button onClick={onSkip} style={{ background: "none", border: "none", color: T.text2, cursor: "pointer", fontSize: 12, fontFamily: T.font, textDecoration: "underline" }}>
-            건너뛰기 / 결과 보기
+          <button onClick={skipBetting} style={{ background: "none", border: "none", color: T.text2, cursor: "pointer", fontSize: 12, fontFamily: T.font, textDecoration: "underline" }}>
+            배팅 포기하기
           </button>
         </div>
       </ArcadePanel>

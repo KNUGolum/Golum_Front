@@ -128,6 +128,7 @@ export default function App() {
                     vote={currentVote} 
                     user={user} 
                     onVoted={(nextVote, nextUser) => refresh(nextUser, nextVote)} 
+                    onBetSkip={(nextVote) => refresh(null, nextVote)}
                     nav={nav} 
                   />
                 )}
@@ -137,7 +138,8 @@ export default function App() {
                     vote={currentVote} 
                     user={user} 
                     onBet={(nextVote, nextUser) => { refresh(nextUser, nextVote); nav("detail", currentVote.id); }} 
-                    onSkip={() => nav("detail", vid)} 
+                    onBack={() => nav("detail", currentVote.id)}
+                    onSkip={(nextVote) => { refresh(null, nextVote); nav("detail", currentVote.id); }} 
                   />
                 )}
                 
