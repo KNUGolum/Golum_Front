@@ -54,7 +54,7 @@ export function HomePage({ votes, user, nav }) {
     { id: "popular", label: "HOT", desc: "인기있는 투표" },
     { id: "active", label: "PLAY", desc: "현재 진행중인 투표" },
     { id: "closed", label: "DONE", desc: "종료된 투표" },
-    { id: "mine", label: "MINE", desc: "내 투표" }
+    { id: "mine", label: "MINE", desc: "내가 참여한 투표" }
   ];
 
   return (
