@@ -29,6 +29,7 @@ export function HomePage({ votes, user, nav }) {
   const [filter, setFilter] = useState("active"); // 필터 상태: active, closed, mine, popular
   const [q, setQ] = useState(""); // 검색어 상태
   const [now] = useState(() => Date.now());
+  const [hoveredFilter, setHoveredFilter] = useState(null);
 
   // [로직] 검색어 및 필터 조건에 따른 투표 목록 필터링
   const list = votes.filter(v => {
@@ -50,10 +51,10 @@ export function HomePage({ votes, user, nav }) {
 
   // 필터 탭 구성 데이터
   const TABS = [
-    { id: "active", label: "PLAY" },
-    { id: "closed", label: "DONE" },
-    { id: "mine", label: "MINE" },
-    { id: "popular", label: "HOT" }
+    { id: "popular", label: "HOT", desc: "인기있는 투표" },
+    { id: "active", label: "PLAY", desc: "현재 진행중인 투표" },
+    { id: "closed", label: "DONE", desc: "종료된 투표" },
+    { id: "mine", label: "MINE", desc: "내 투표" }
   ];
 
   return (
@@ -111,6 +112,31 @@ export function HomePage({ votes, user, nav }) {
           object-fit: contain;
           image-rendering: pixelated;
           filter: drop-shadow(0 0 5px rgba(0,255,234,0.32));
+        }
+        .filter-tooltip {
+          position: absolute;
+          left: 50%;
+          bottom: calc(100% + 8px);
+          transform: translate(-50%, 4px);
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          white-space: nowrap;
+          z-index: 20;
+          padding: 6px 9px;
+          border: 2px solid rgba(224,254,255,0.85);
+          background: rgba(5,0,23,0.96);
+          color: #f7f2ff;
+          font-size: 11px;
+          font-weight: 900;
+          box-shadow: 3px 3px 0 #000, 0 0 12px rgba(0,255,234,0.28);
+          transition: opacity .12s steps(2, end), transform .12s steps(2, end), visibility 0s linear .12s;
+        }
+        .filter-tab:hover .filter-tooltip {
+          opacity: 1;
+          visibility: visible;
+          transform: translate(-50%, 0);
+          transition-delay: .55s, .55s, .55s;
         }
       `}</style>
       <div className="home-stage">
@@ -191,23 +217,37 @@ export function HomePage({ votes, user, nav }) {
 
       {/* 필터 탭 */}
       <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap", padding: "0 8px" }}>
-        {TABS.map(f => (
-          <div 
-            key={f.id} 
-            onClick={() => setFilter(f.id)} 
-            style={{
-              minWidth: 80, textAlign: "center",
-              padding: "8px 15px", borderRadius: 2, fontSize: 13, fontWeight: 900, 
-              cursor: "pointer", border: "2px solid", transition: "all .12s steps(2, end)",
-              background: filter === f.id ? T.gold : "rgba(23,6,58,0.88)",
-              color: filter === f.id ? "#050017" : T.text2,
-              borderColor: filter === f.id ? T.primary : T.border,
-              boxShadow: filter === f.id ? `3px 3px 0 #000, 0 0 12px ${T.goldDim}` : "inset 0 0 12px rgba(123,61,255,0.24)"
-            }}
-          >
-            {f.label}
-          </div>
-        ))}
+        {TABS.map(f => {
+          const selected = filter === f.id;
+          const hovering = hoveredFilter === f.id;
+          return (
+            <div 
+              key={f.id}
+              className="filter-tab"
+              onClick={() => setFilter(f.id)}
+              onMouseEnter={() => setHoveredFilter(f.id)}
+              onMouseLeave={() => setHoveredFilter(null)}
+              style={{
+                minWidth: 80, textAlign: "center", position: "relative",
+                padding: "8px 15px", borderRadius: 2, fontSize: 13, fontWeight: 900, 
+                cursor: "pointer", border: "2px solid", transition: "all .12s steps(2, end)",
+                background: selected ? T.gold : hovering ? "rgba(45,14,102,0.98)" : "rgba(15,4,48,0.98)",
+                color: selected ? "#050017" : "#f2ecff",
+                borderColor: selected ? T.primary : hovering ? "rgba(224,254,255,0.92)" : "rgba(123,61,255,0.95)",
+                textShadow: selected ? "none" : "2px 2px 0 #000, 0 0 8px rgba(224,254,255,0.25)",
+                transform: hovering && !selected ? "translate(-1px, -1px)" : undefined,
+                boxShadow: selected
+                  ? `3px 3px 0 #000, 0 0 12px ${T.goldDim}`
+                  : hovering
+                    ? "4px 4px 0 #000, 0 0 14px rgba(0,255,234,0.28), inset 0 0 14px rgba(123,61,255,0.34)"
+                    : "2px 2px 0 #000, inset 0 0 12px rgba(123,61,255,0.26)"
+              }}
+            >
+              {f.label}
+              <span className="filter-tooltip">{f.desc}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* 투표 목록 리스트 */}
