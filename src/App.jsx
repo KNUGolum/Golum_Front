@@ -1,9 +1,12 @@
 // src/App.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { T } from "./styles/theme";
 import { ToastProvider } from "./context/ToastContext";
-import { MOCK_VOTES } from "./data/mockData";
 import backgroundImage from "./assets/Background.png";
+import { authApi } from "./api/auth";
+import { betsApi } from "./api/bets";
+import { clearTokens, getTokens } from "./api/client";
+import { pollsApi } from "./api/polls";
 
 // 페이지 컴포넌트들 불러오기
 import { AuthPage } from "./pages/AuthPage";
@@ -20,33 +23,123 @@ export default function App() {
   // --- 전역 상태 관리 ---
   const [page, setPage] = useState("auth");    // 현재 보여줄 페이지 관리
   const [user, setUser] = useState(null);      // 로그인한 유저 정보
-  const [votes, setVotes] = useState([...MOCK_VOTES]); // 전체 투표 목록
-  const [vid, setVid] = useState(null);        // 현재 상세 보기 중인 투표 ID
+  const [votes, setVotes] = useState([]); // 전체 투표 목록
+  const [currentVote, setCurrentVote] = useState(null);
+  const [filter, setFilter] = useState("active");
+  const [loadingList, setLoadingList] = useState(false);
 
-  // [로직] 데이터 새로고침 및 동기화
-  function refresh(nextUser, nextVote) {
-    if (nextUser) setUser(nextUser);
-    if (nextVote) {
-      const voteIndex = MOCK_VOTES.findIndex(v => v.id === nextVote.id);
-      if (voteIndex >= 0) MOCK_VOTES[voteIndex] = nextVote;
+  async function refreshMe() {
+    const nextUser = await authApi.me();
+    setUser(nextUser);
+    return nextUser;
+  }
+
+  async function loadVotes(nextFilter = filter) {
+    setLoadingList(true);
+    try {
+      const data = await pollsApi.list({ filter: nextFilter });
+      setVotes(data.polls);
+    } finally {
+      setLoadingList(false);
     }
-    setVotes([...MOCK_VOTES]); // 실제로는 여기서 다시 API 요청을 보냄
+  }
+
+  async function loadVoteDetail(voteId, nextUser = user) {
+    if (!nextUser) return null;
+    const detail = await pollsApi.detail(voteId, nextUser.email);
+    setCurrentVote(detail);
+    setVotes((prev) => prev.map((v) => (v.id === detail.id ? { ...v, ...detail } : v)));
+    return detail;
   }
 
   // [로직] 페이지 이동 함수 (nav)
   function nav(p, voteId) {
-    if (voteId !== undefined) setVid(voteId);
+    if (voteId !== undefined) {
+      setCurrentVote(votes.find((v) => v.id === voteId) || null);
+    }
     setPage(p);
     window.scrollTo(0, 0); // 페이지 이동 시 최상단으로 스크롤
+    if ((p === "detail" || p === "bet") && voteId !== undefined) {
+      loadVoteDetail(voteId).catch(() => {});
+    }
   }
 
-  // 현재 선택된 투표 데이터 찾기
-  const currentVote = votes.find(v => v.id === vid) || null;
+  async function handleLogin(nextUser) {
+    setUser(nextUser);
+    setPage("home");
+    await loadVotes("active");
+  }
+
+  function handleLogout() {
+    clearTokens();
+    setUser(null);
+    setVotes([]);
+    setCurrentVote(null);
+    setPage("auth");
+  }
+
+  async function handleFilterChange(nextFilter) {
+    setFilter(nextFilter);
+    await loadVotes(nextFilter);
+  }
+
+  async function handleVoted(choice) {
+    await pollsApi.vote(currentVote.id, choice);
+    const nextUser = await refreshMe();
+    await loadVoteDetail(currentVote.id, nextUser);
+    await loadVotes(filter);
+  }
+
+  async function handleBet(amount) {
+    await betsApi.bet(currentVote.id, {
+      optionId: currentVote.mySelection,
+      amount,
+    });
+    const nextUser = await refreshMe();
+    await loadVoteDetail(currentVote.id, nextUser);
+    await loadVotes(filter);
+    setPage("detail");
+    window.scrollTo(0, 0);
+  }
+
+  async function handleCreated(input) {
+    const created = await pollsApi.create(input);
+    const detail = await pollsApi.detail(created.pollId, user.email);
+    setCurrentVote(detail);
+    await loadVotes(filter);
+    setPage("detail");
+    window.scrollTo(0, 0);
+  }
+
+  useEffect(() => {
+    if (!getTokens()?.accessToken) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshMe()
+      .then((nextUser) => {
+        setPage("home");
+        return pollsApi.list({ filter: "active" }).then((data) => {
+          setVotes(data.polls);
+          return nextUser;
+        });
+      })
+      .catch(() => {
+        clearTokens();
+        setUser(null);
+        setPage("auth");
+      });
+  }, []);
 
   return (
     <ToastProvider>
       {/* 전역 스타일 설정 (Reset 및 애니메이션) */}
       <style>{`
+        @font-face {
+          font-family: "NeoDonggeunmo";
+          src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.3/NeoDunggeunmo.woff") format("woff");
+          font-weight: normal;
+          font-style: normal;
+          font-display: swap;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { background: #06030b; }
         body {
@@ -111,24 +204,31 @@ export default function App() {
       <div style={{ minHeight: "100vh", background: "transparent", color: T.text, position: "relative", zIndex: 1 }}>
         {page === "auth" ? (
           // 1. 미인증 유저에게는 로그인 페이지 표시
-          <AuthPage onLogin={u => { setUser(u); nav("home"); }} />
+          <AuthPage onLogin={handleLogin} />
         ) : (
           // 2. 인증된 유저에게는 네비게이션 바와 각 페이지 표시
           user && (
             <>
-              <NavBar user={user} nav={nav} logout={() => { setUser(null); setPage("auth"); }} />
+              <NavBar user={user} nav={nav} logout={handleLogout} />
               
               <main style={{ minHeight: "calc(100vh - 56px)" }}>
                 {page === "home" && (
-                  <HomePage votes={votes} user={user} nav={nav} />
+                  <HomePage
+                    votes={votes}
+                    user={user}
+                    nav={nav}
+                    filter={filter}
+                    onFilterChange={handleFilterChange}
+                    loading={loadingList}
+                  />
                 )}
                 
                 {page === "detail" && currentVote && (
                   <VoteDetailPage 
                     vote={currentVote} 
                     user={user} 
-                    onVoted={(nextVote, nextUser) => refresh(nextUser, nextVote)} 
-                    onBetSkip={(nextVote) => refresh(null, nextVote)}
+                    onVoted={handleVoted}
+                    onBetSkip={() => handleBet(0)}
                     nav={nav} 
                   />
                 )}
@@ -137,16 +237,16 @@ export default function App() {
                   <BettingPage 
                     vote={currentVote} 
                     user={user} 
-                    onBet={(nextVote, nextUser) => { refresh(nextUser, nextVote); nav("detail", currentVote.id); }} 
+                    onBet={handleBet}
                     onBack={() => nav("detail", currentVote.id)}
-                    onSkip={(nextVote) => { refresh(null, nextVote); nav("detail", currentVote.id); }} 
+                    onSkip={() => handleBet(0)}
                   />
                 )}
                 
                 {page === "create" && (
                   <CreateVotePage 
                     user={user} 
-                    onCreated={v => { refresh(); nav("detail", v.id); }} 
+                    onCreated={handleCreated}
                     nav={nav} 
                   />
                 )}

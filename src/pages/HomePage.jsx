@@ -25,8 +25,7 @@ const HUD_CORNER_BITS = [
   { x: 4, y: 29, size: 2, opacity: 0.14, glow: 1 },
 ];
 
-export function HomePage({ votes, user, nav }) {
-  const [filter, setFilter] = useState("active"); // 필터 상태: active, closed, mine, popular
+export function HomePage({ votes, user, nav, filter, onFilterChange, loading }) {
   const [q, setQ] = useState(""); // 검색어 상태
   const [now] = useState(() => Date.now());
   const [hoveredFilter, setHoveredFilter] = useState(null);
@@ -40,12 +39,6 @@ export function HomePage({ votes, user, nav }) {
         !v.optB.includes(q)
     ) return false;
 
-    // 2. 카테고리 필터링
-    if (filter === "active") return v.status === "active" && v.expiresAt > now;
-    if (filter === "closed") return v.status === "closed" || v.expiresAt <= now;
-    if (filter === "mine") return v.participants.some(p => p.email === user.email);
-    if (filter === "popular") return v.status === "active" && v.expiresAt > now && (v.votesA + v.votesB) >= 50;
-    
     return true;
   }).sort((a, b) => b.createdAt - a.createdAt); // 최신순으로 정렬
 
@@ -224,7 +217,7 @@ export function HomePage({ votes, user, nav }) {
             <div 
               key={f.id}
               className="filter-tab"
-              onClick={() => setFilter(f.id)}
+              onClick={() => onFilterChange(f.id)}
               onMouseEnter={() => setHoveredFilter(f.id)}
               onMouseLeave={() => setHoveredFilter(null)}
               style={{
@@ -251,7 +244,11 @@ export function HomePage({ votes, user, nav }) {
       </div>
 
       {/* 투표 목록 리스트 */}
-      {list.length === 0 ? (
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: T.muted }}>
+          <p style={{ fontSize: 13 }}>불러오는 중...</p>
+        </div>
+      ) : list.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 20px", color: T.muted }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🗳️</div>
           <p style={{ fontSize: 13 }}>{q ? "검색 결과가 없습니다." : "해당하는 투표가 없습니다."}</p>

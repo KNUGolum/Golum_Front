@@ -76,7 +76,7 @@ export function VoteCard({ vote, onClick, userEmail }) {
   const [now] = useState(() => Date.now());
 
   // [로직] 내가 이 투표에 참여했는지 확인
-  const joined = vote.participants.some(p => p.email === userEmail);
+  const joined = vote.hasVoted || vote.participants.some(p => p.email === userEmail);
   
   // [로직] 투표가 현재 활성 상태인지 확인 (상태가 active이고 만료 시간이 현재보다 미래여야 함)
   const active = vote.status === "active" && vote.expiresAt > now;
@@ -185,7 +185,7 @@ export function VoteCard({ vote, onClick, userEmail }) {
       </div>
 
       {/* 참여했거나 종료된 투표라면 득표율 게이지 표시 */}
-      {(joined || vote.status === "closed") && (
+      {vote.hasDetailedStats && (vote.resultsVisible || joined || vote.status === "closed") && (
         <div style={{ marginBottom: 7, position: "relative", zIndex: 2 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.text2, marginBottom: 3 }}>
             <span style={{ color: T.primary }}>{ra}%</span>

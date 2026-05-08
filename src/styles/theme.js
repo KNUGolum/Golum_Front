@@ -6,6 +6,6 @@ export const T = {
   gold:"#FFE75C",goldDim:"rgba(255,231,92,0.2)",
   text:"#F6F0FF",text2:"#BBA7FF",muted:"#725CA8",
   radius:"2px",radiusSm:"0",
-  font:"ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+  font:"NeoDonggeunmo, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   pixelShadow:"5px 5px 0 #000, 8px 8px 0 rgba(255,43,214,0.34)",
 };

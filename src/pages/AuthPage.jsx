@@ -5,8 +5,7 @@ import { Button } from "../components/common/Button";
 import { Field } from "../components/common/Field";
 import { ArcadePanel } from "../components/common/ArcadePanel";
 import { useToast } from "../context/ToastContext";
-import { MOCK_USERS } from "../data/mockData";
-import { delay } from "../utils/helpers";
+import { authApi } from "../api/auth";
 import packman1 from "../assets/packman1.png";
 import packman2 from "../assets/packman2.png";
 import packman3 from "../assets/packman3.png";
@@ -173,31 +172,36 @@ export function AuthPage({ onLogin }) {
       return;
     }
     setLoading(true);
-    await delay(); // 서버 통신 흉내
-    const user = MOCK_USERS.find((u) => u.email === em && u.password === pw);
-    setLoading(false);
-
-    if (!user) {
-      toast("이메일 또는 비밀번호가 올바르지 않습니다.", "error");
-      return;
+    try {
+      await authApi.signin({ email: em, password: pw });
+      const user = await authApi.me();
+      toast(`환영합니다, ${user.nickname}님!`, "success");
+      await onLogin(user);
+    } catch (error) {
+      toast(error.message || "이메일 또는 비밀번호가 올바르지 않습니다.", "error");
+    } finally {
+      setLoading(false);
     }
-    toast(`환영합니다, ${user.nickname}님! 👋`, "success");
-    onLogin({ ...user });
   }
 
   // [로직] 이메일 중복 확인
   async function checkEmail() {
     if (!sEm) return;
     setSEmSt("checking");
-    await delay(300);
-    if (MOCK_USERS.find((u) => u.email === sEm)) {
-      setSEmSt("err");
-      setSEmOk(false);
-      toast("이미 가입된 이메일입니다.", "error");
-    } else {
+    try {
+      await authApi.checkEmail(sEm);
       setSEmSt("ok");
       setSEmOk(true);
       toast("사용 가능한 이메일입니다.", "success");
+    } catch (error) {
+      setSEmSt("err");
+      setSEmOk(false);
+      toast(
+        error.status === 409
+          ? "이미 가입된 이메일입니다."
+          : error.message || "이메일 중복 확인에 실패했습니다.",
+        "error"
+      );
     }
   }
 
@@ -205,15 +209,20 @@ export function AuthPage({ onLogin }) {
   async function checkNickname() {
     if (!sNk) return;
     setSNkSt("checking");
-    await delay(300);
-    if (MOCK_USERS.find((u) => u.nickname === sNk)) {
-      setSNkSt("err");
-      setSNkOk(false);
-      toast("이미 사용 중인 닉네임입니다.", "error");
-    } else {
+    try {
+      await authApi.checkNickname(sNk);
       setSNkSt("ok");
       setSNkOk(true);
       toast("사용 가능한 닉네임입니다. ✓", "success");
+    } catch (error) {
+      setSNkSt("err");
+      setSNkOk(false);
+      toast(
+        error.status === 409
+          ? "이미 사용 중인 닉네임입니다."
+          : error.message || "닉네임 중복 확인에 실패했습니다.",
+        "error"
+      );
     }
   }
 
@@ -232,19 +241,17 @@ export function AuthPage({ onLogin }) {
       return;
     }
     setSLoad(true);
-    await delay();
-    const newUser = {
-      id: `u${Date.now()}`,
-      email: sEm,
-      nickname: sNk,
-      password: sPw,
-      credits: 1000,
-      createdAt: Date.now(),
-    };
-    MOCK_USERS.push(newUser);
-    setSLoad(false);
-    toast("🎉 가입 완료! 1,000 크레딧이 지급되었습니다.", "gold");
-    onLogin({ ...newUser });
+    try {
+      await authApi.signup({ email: sEm, nickname: sNk, password: sPw });
+      await authApi.signin({ email: sEm, password: sPw });
+      const user = await authApi.me();
+      toast("가입이 완료되었습니다.", "gold");
+      await onLogin(user);
+    } catch (error) {
+      toast(error.message || "회원가입에 실패했습니다.", "error");
+    } finally {
+      setSLoad(false);
+    }
   }
 
   return (
