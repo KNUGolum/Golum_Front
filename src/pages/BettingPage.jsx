@@ -4,7 +4,6 @@ import { T } from "../styles/theme";
 import { Button } from "../components/common/Button";
 import { ArcadePanel } from "../components/common/ArcadePanel";
 import { useToast } from "../context/ToastContext";
-import { delay } from "../utils/helpers";
 
 const MIN_BET_AMOUNT = 1;
 
@@ -12,7 +11,7 @@ export function BettingPage({ vote, user, onBet, onBack, onSkip }) {
   const toast = useToast();
   
   // [데이터 분석] 내 투표 정보 가져오기
-  const myP = vote.participants.find(p => p.email === user.email);
+  const myP = vote.hasVoted ? { email: user.email, choice: vote.mySelection } : vote.participants.find(p => p.email === user.email);
   
   // [상태 관리] 배팅 금액 (기본값 100)
   const [amt, setAmt] = useState(100);
@@ -22,7 +21,7 @@ export function BettingPage({ vote, user, onBet, onBack, onSkip }) {
   const MAX = Math.max(user.credits, 0); // 보유 크레딧이 0 미만으로 떨어지는 것 방지
   const QUICK = [50, 100, 300, 500, 1000].filter(a => a <= MAX); // 보유액 내의 퀵 버튼만 표시
   const payout = Math.floor(amt * 1.5); // 승리 시 1.5배 배당
-  const canBet = MAX >= MIN_BET_AMOUNT;
+  const canBet = vote.canBet && MAX >= MIN_BET_AMOUNT;
   const clampBet = (value) => Math.max(MIN_BET_AMOUNT, Math.min(MAX, value || MIN_BET_AMOUNT));
 
   const myLabel = myP?.choice === "A" ? vote.optA : vote.optB;
@@ -44,56 +43,30 @@ export function BettingPage({ vote, user, onBet, onBack, onSkip }) {
     }
 
     setLoading(true);
-    await delay(); // 서버 통신 흉내
-
-    const nextBet = {
-      email: user.email,
-      choice: myP.choice,
-      amount: amt,
-      result: "pending",
-      payout: 0,
-      placedAt: Number(new Date()),
-    };
-    const nextVote = {
-      ...vote,
-      bets: [...vote.bets, nextBet],
-      totalBetA: vote.totalBetA + (myP.choice === "A" ? amt : 0),
-      totalBetB: vote.totalBetB + (myP.choice === "B" ? amt : 0),
-    };
-    const nextUser = { ...user, credits: user.credits - amt + 100 };
-
-    setLoading(false);
-    toast("💰 배팅 완료! +100 C 참여 보상 지급", "gold");
-    
-    onBet(nextVote, nextUser); // 데이터 갱신 후 상세 페이지로 이동
+    try {
+      await onBet(amt);
+      toast("배팅 완료! 참여 보상이 지급되었습니다.", "gold");
+    } catch (error) {
+      toast(error.message || "배팅에 실패했습니다.", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function skipBetting() {
+  async function skipBetting() {
     if (!myP) {
       toast("투표 참여 후 배팅을 포기할 수 있습니다.", "error");
       return;
     }
-    const existingBet = vote.bets.find(b => b.email === user.email);
-    const skippedAt = Number(new Date());
-    const nextVote = existingBet
-      ? vote
-      : {
-          ...vote,
-          bets: [
-            ...vote.bets,
-            {
-              email: user.email,
-              choice: myP.choice,
-              amount: 0,
-              result: "skipped",
-              payout: 0,
-              placedAt: skippedAt,
-            },
-          ],
-        };
-
-    toast("배팅을 포기했습니다. 결과를 확인할 수 있습니다.", "info");
-    onSkip(nextVote);
+    setLoading(true);
+    try {
+      await onSkip();
+      toast("배팅을 포기했습니다. 결과를 확인할 수 있습니다.", "info");
+    } catch (error) {
+      toast(error.message || "배팅 포기에 실패했습니다.", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

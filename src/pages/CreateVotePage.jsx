@@ -5,10 +5,8 @@ import { Button } from "../components/common/Button";
 import { Field } from "../components/common/Field";
 import { ArcadePanel } from "../components/common/ArcadePanel";
 import { useToast } from "../context/ToastContext";
-import { MOCK_VOTES } from "../data/mockData"; // 실제로는 API로 보내겠지만 현재는 Mock에 추가
-import { delay } from "../utils/helpers";
 
-export function CreateVotePage({ user, onCreated, nav }) {
+export function CreateVotePage({ onCreated, nav }) {
   const toast = useToast();
   
   // [상태 관리] 투표 정보 입력 상태
@@ -34,36 +32,19 @@ export function CreateVotePage({ user, onCreated, nav }) {
     }
 
     setLoading(true);
-    await delay(); // 서버 통신 흉내
-
-    // [데이터 생성] 실제 서비스에서는 백엔드 API로 전송될 객체입니다.
-    const newVote = {
-      id: Date.now(),
-      title: title.trim(),
-      optA: optA.trim(),
-      optB: optB.trim(),
-      duration: dur,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + dur * 3600000,
-      creator: user.email,
-      participants: [],
-      bets: [],
-      status: "active",
-      winner: null,
-      votesA: 0,
-      votesB: 0,
-      totalBetA: 0,
-      totalBetB: 0
-    };
-
-    // 로컬 데이터에 임시 추가 (데모용)
-    MOCK_VOTES.unshift(newVote);
-    
-    setLoading(false);
-    toast("🎉 투표가 성공적으로 생성되었습니다!", "success");
-    
-    // 생성 완료 후 상세 페이지로 이동
-    onCreated(newVote);
+    try {
+      await onCreated({
+        title: title.trim(),
+        optionA: optA.trim(),
+        optionB: optB.trim(),
+        durationHours: dur,
+      });
+      toast("투표가 성공적으로 생성되었습니다.", "success");
+    } catch (error) {
+      toast(error.message || "투표 생성에 실패했습니다.", "error");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
