@@ -3,27 +3,37 @@ export function mapUser(apiUser) {
     id: apiUser.id,
     email: apiUser.email,
     nickname: apiUser.nickname,
-    credits: apiUser.credit,
+    credits: apiUser.credit ?? apiUser.credits ?? 0,
   };
 }
 
 export function mapStatus(apiStatus) {
-  return apiStatus === "ONGOING" ? "active" : "closed";
+  return apiStatus === "ONGOING" || apiStatus === "ACTIVE" ? "active" : "closed";
 }
 
-function toTime(value, fallback = Date.now()) {
+function toTime(value, fallback) {
   const time = value ? Date.parse(value) : NaN;
   return Number.isNaN(time) ? fallback : time;
 }
 
+function mapSelection(selection, optionA = {}, optionB = {}) {
+  if (!selection) return null;
+  const value = String(selection);
+  const optionAId = optionA.id ?? optionA.optionId ?? optionA.option_id;
+  const optionBId = optionB.id ?? optionB.optionId ?? optionB.option_id;
+  if (value === "A" || value === String(optionAId)) return "A";
+  if (value === "B" || value === String(optionBId)) return "B";
+  return selection;
+}
+
 export function mapPollListItem(apiPoll) {
   const status = mapStatus(apiPoll.status);
-  const choice = apiPoll.mySelection || null;
+  const choice = mapSelection(apiPoll.mySelection ?? apiPoll.my_selection);
   return {
-    id: apiPoll.pollId,
-    title: apiPoll.title,
-    optA: apiPoll.optionA,
-    optB: apiPoll.optionB,
+    id: apiPoll.pollId ?? apiPoll.id,
+    title: apiPoll.title || "",
+    optA: apiPoll.optionA || "",
+    optB: apiPoll.optionB || "",
     duration: null,
     createdAt: toTime(apiPoll.createdAt),
     expiresAt: toTime(apiPoll.endTime),
@@ -34,15 +44,15 @@ export function mapPollListItem(apiPoll) {
     status,
     winner: null,
     votesA: 0,
-    votesB: apiPoll.totalVotes || 0,
+    votesB: apiPoll.totalVotes ?? 0,
     totalBetA: 0,
     totalBetB: 0,
-    hasVoted: apiPoll.hasVoted,
-    hasBet: apiPoll.hasBet,
-    isCreator: apiPoll.isCreator,
+    hasVoted: !!apiPoll.hasVoted,
+    hasBet: !!apiPoll.hasBet,
+    isCreator: !!apiPoll.isCreator,
     resultsVisible: apiPoll.resultsVisible,
-    canVote: apiPoll.canVote,
-    canBet: apiPoll.canBet,
+    canVote: !!apiPoll.canVote,
+    canBet: !!apiPoll.canBet,
     mySelection: choice,
     hasDetailedStats: false,
   };
@@ -51,41 +61,49 @@ export function mapPollListItem(apiPoll) {
 export function mapPollDetail(apiPoll, userEmail) {
   const optionA = apiPoll.options?.[0] || {};
   const optionB = apiPoll.options?.[1] || {};
+  const optionAId = optionA.id ?? optionA.optionId ?? optionA.option_id;
+  const optionBId = optionB.id ?? optionB.optionId ?? optionB.option_id;
+  const rawSelection = apiPoll.mySelection ?? apiPoll.my_selection;
+  const choice = mapSelection(rawSelection, optionA, optionB);
+  const selectedOptionId = choice === "A" ? optionAId : choice === "B" ? optionBId : rawSelection;
   const winner =
     apiPoll.isDraw ? "draw" :
-    apiPoll.winnerOptionId === optionA.id ? "A" :
-    apiPoll.winnerOptionId === optionB.id ? "B" :
+    (apiPoll.winnerOptionId ?? apiPoll.winner_option_id) === optionAId ? "A" :
+    (apiPoll.winnerOptionId ?? apiPoll.winner_option_id) === optionBId ? "B" :
     null;
   const status = mapStatus(apiPoll.status);
 
   return {
-    id: apiPoll.id,
-    title: apiPoll.title,
-    optA: optionA.optionText || "",
-    optB: optionB.optionText || "",
+    id: apiPoll.id ?? apiPoll.pollId,
+    title: apiPoll.title || "",
+    optA: optionA.optionText ?? optionA.option_text ?? "",
+    optB: optionB.optionText ?? optionB.option_text ?? "",
+    optionAId,
+    optionBId,
     duration: null,
-    createdAt: Date.now(),
+    createdAt: toTime(apiPoll.createdAt, undefined),
     expiresAt: toTime(apiPoll.endTime),
     creator: apiPoll.isCreator ? userEmail : null,
     participants: apiPoll.hasVoted
-      ? [{ email: userEmail, choice: apiPoll.mySelection, votedAt: Date.now() }]
+      ? [{ email: userEmail, choice, votedAt: Date.now() }]
       : [],
     bets: apiPoll.hasBet
-      ? [{ email: userEmail, choice: apiPoll.mySelection, amount: 0, result: "pending", payout: 0, placedAt: Date.now() }]
+      ? [{ email: userEmail, choice, amount: 0, result: "pending", payout: 0, placedAt: Date.now() }]
       : [],
     status,
     winner,
-    votesA: optionA.voteCount || 0,
-    votesB: optionB.voteCount || 0,
-    totalBetA: optionA.betCredits || 0,
-    totalBetB: optionB.betCredits || 0,
+    votesA: optionA.voteCount ?? optionA.vote_count ?? 0,
+    votesB: optionB.voteCount ?? optionB.vote_count ?? 0,
+    totalBetA: optionA.betCredits ?? optionA.bet_credits ?? 0,
+    totalBetB: optionB.betCredits ?? optionB.bet_credits ?? 0,
     resultsVisible: apiPoll.resultsVisible,
     canVote: apiPoll.canVote,
     canBet: apiPoll.canBet,
-    hasVoted: apiPoll.hasVoted,
-    hasBet: apiPoll.hasBet,
-    isCreator: apiPoll.isCreator,
-    mySelection: apiPoll.mySelection,
+    hasVoted: !!apiPoll.hasVoted,
+    hasBet: !!apiPoll.hasBet,
+    isCreator: !!apiPoll.isCreator,
+    mySelection: choice,
+    selectedOptionId: selectedOptionId == null ? null : String(selectedOptionId),
     hasDetailedStats: true,
   };
 }

@@ -40,7 +40,7 @@ export function HomePage({ votes, user, nav, filter, onFilterChange, loading }) 
     ) return false;
 
     return true;
-  }).sort((a, b) => b.createdAt - a.createdAt); // 최신순으로 정렬
+  }); // 정렬은 백엔드의 sort 파라미터 결과를 유지한다.
 
   // 필터 탭 구성 데이터
   const TABS = [
