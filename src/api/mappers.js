@@ -30,9 +30,7 @@ function mapSelection(selection, optionA = {}, optionB = {}) {
 export function mapPollListItem(apiPoll) {
   const mappedStatus = mapStatus(apiPoll.status);
   const totalVotes = apiPoll.totalVotes ?? apiPoll.total_votes ?? 0;
-  const status = mappedStatus === "invalid" || (mappedStatus === "closed" && totalVotes === 0)
-    ? "invalid"
-    : mappedStatus;
+  const status = mappedStatus;
   const choice = mapSelection(apiPoll.mySelection ?? apiPoll.my_selection);
   return {
     id: apiPoll.pollId ?? apiPoll.id,
@@ -74,7 +72,7 @@ export function mapPollDetail(apiPoll, userEmail) {
   const choice = mapSelection(rawSelection, optionA, optionB);
   const selectedOptionId = choice === "A" ? optionAId : choice === "B" ? optionBId : rawSelection;
   const mappedStatus = mapStatus(apiPoll.status);
-  const invalid = mappedStatus === "invalid" || (mappedStatus === "closed" && votesA === 0 && votesB === 0);
+  const invalid = mappedStatus === "invalid";
   const winner = invalid ? null :
     apiPoll.isDraw ? "draw" :
     (apiPoll.winnerOptionId ?? apiPoll.winner_option_id) === optionAId ? "A" :
