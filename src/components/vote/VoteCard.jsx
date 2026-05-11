@@ -1,7 +1,7 @@
 // src/components/vote/VoteCard.jsx
 import { useState } from "react";
 import { T } from "../../styles/theme";
-import { timeAgo, timeLeft, rateA } from "../../utils/helpers";
+import { timeAgo, timeLeft } from "../../utils/helpers";
 import blueGhost from "../../assets/ghosts/Blue1.png";
 import redGhost from "../../assets/ghosts/Red1.png";
 import yellowGhost from "../../assets/ghosts/yellow1.png";
@@ -80,9 +80,14 @@ export function VoteCard({ vote, onClick, userEmail }) {
   
   // [로직] 투표가 현재 활성 상태인지 확인 (상태가 active이고 만료 시간이 현재보다 미래여야 함)
   const active = vote.status === "active" && vote.expiresAt > now;
+  const invalid = vote.status === "invalid";
+  const statusLabel = invalid ? "무효처리" : active ? "진행중" : "종료";
+  const statusColor = invalid ? "#A8A8B8" : active ? T.accent : T.muted;
+  const statusBackground = invalid ? "rgba(168,168,184,0.1)" : active ? "rgba(54,255,77,0.08)" : T.card2;
+  const statusBorder = invalid ? "rgba(168,168,184,0.68)" : active ? T.accent : T.border;
+  const cardBorder = invalid ? "rgba(168,168,184,0.62)" : hov ? T.danger : T.border;
+  const metaColor = invalid ? "#A8A8B8" : T.primary;
   
-  // [유틸] A진영의 득표율 계산
-  const ra = rateA(vote);
   const ghostIcon = GHOST_ICONS[vote.id % GHOST_ICONS.length];
 
   return (
@@ -91,17 +96,21 @@ export function VoteCard({ vote, onClick, userEmail }) {
       onMouseEnter={() => setHov(true)} 
       onMouseLeave={() => setHov(false)}
       style={{
-        background: hov
+        background: invalid
+          ? "linear-gradient(145deg, rgba(42,42,54,0.84), rgba(13,13,22,0.94))"
+          : hov
           ? "linear-gradient(145deg, rgba(48,11,98,0.9), rgba(14,0,38,0.94))"
           : "linear-gradient(145deg, rgba(28,5,66,0.84), rgba(8,0,31,0.9))",
-        border: `2px solid ${hov ? T.danger : T.border}`,
+        border: `2px solid ${cardBorder}`,
         borderRadius: 8,
         padding: "11px 14px 10px",
         margin: "0 8px 12px",
         cursor: "pointer",
         transition: "all .12s steps(2, end)",
         transform: hov ? "translate(-2px, -2px)" : undefined,
-        boxShadow: hov
+        boxShadow: invalid
+          ? "0 0 10px rgba(168,168,184,0.2), inset 0 0 20px rgba(168,168,184,0.08), inset 0 -18px 24px rgba(0,0,0,0.22)"
+          : hov
           ? `4px 4px 0 #000, 0 0 16px rgba(255,43,214,0.52), inset 0 0 24px rgba(0,255,234,0.08), inset 0 -18px 26px rgba(255,43,214,0.13)`
           : "0 0 10px rgba(123,61,255,0.32), inset 0 0 20px rgba(0,255,234,0.07), inset 0 -18px 24px rgba(255,43,214,0.1)",
         position: "relative",
@@ -110,8 +119,8 @@ export function VoteCard({ vote, onClick, userEmail }) {
       }}
     >
       <div style={{ position: "absolute", inset: 0, opacity: 0.1, background: "repeating-linear-gradient(180deg, rgba(255,255,255,0.42) 0px, rgba(255,255,255,0.42) 1px, transparent 1px, transparent 5px)", pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(255,255,255,0.08), transparent 34%), linear-gradient(90deg, rgba(0,255,234,0.1), transparent 44%, rgba(255,43,214,0.1))", pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "absolute", top: 0, left: 12, right: 12, height: 1, background: "linear-gradient(90deg, transparent, rgba(224,254,255,0.72), rgba(255,154,238,0.54), transparent)", boxShadow: "0 0 8px rgba(180,255,255,0.42)", pointerEvents: "none", zIndex: 1 }} />
+      <div style={{ position: "absolute", inset: 0, background: invalid ? "linear-gradient(180deg, rgba(255,255,255,0.06), transparent 34%), linear-gradient(90deg, rgba(168,168,184,0.12), transparent 44%, rgba(168,168,184,0.06))" : "linear-gradient(180deg, rgba(255,255,255,0.08), transparent 34%), linear-gradient(90deg, rgba(0,255,234,0.1), transparent 44%, rgba(255,43,214,0.1))", pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "absolute", top: 0, left: 12, right: 12, height: 1, background: invalid ? "linear-gradient(90deg, transparent, rgba(210,210,220,0.58), transparent)" : "linear-gradient(90deg, transparent, rgba(224,254,255,0.72), rgba(255,154,238,0.54), transparent)", boxShadow: invalid ? "0 0 8px rgba(168,168,184,0.24)" : "0 0 8px rgba(180,255,255,0.42)", pointerEvents: "none", zIndex: 1 }} />
       <div style={{ position: "absolute", inset: 4, border: "1px solid rgba(224,254,255,0.08)", borderRadius: 5, pointerEvents: "none", zIndex: 1 }} />
       <VoteCardCorner corner="top-left" side="left" />
       <VoteCardCorner corner="bottom-left" side="left" />
@@ -124,8 +133,8 @@ export function VoteCard({ vote, onClick, userEmail }) {
         <div style={{
           width: 38, height: 38,
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: T.border,
-          boxShadow: `0 0 10px rgba(123,61,255,0.48), 0 0 8px ${ghostIcon.glow}`,
+          background: invalid ? "rgba(168,168,184,0.6)" : T.border,
+          boxShadow: invalid ? "0 0 10px rgba(168,168,184,0.3)" : `0 0 10px rgba(123,61,255,0.48), 0 0 8px ${ghostIcon.glow}`,
           clipPath: OCTAGON,
           position: "relative",
         }}>
@@ -147,22 +156,22 @@ export function VoteCard({ vote, onClick, userEmail }) {
               height: 29,
               objectFit: "contain",
               imageRendering: "pixelated",
-              filter: `drop-shadow(2px 2px 0 #000) drop-shadow(0 0 7px ${ghostIcon.glow})`,
+              filter: invalid ? "grayscale(1) drop-shadow(2px 2px 0 #000) drop-shadow(0 0 6px rgba(168,168,184,0.45))" : `drop-shadow(2px 2px 0 #000) drop-shadow(0 0 7px ${ghostIcon.glow})`,
               userSelect: "none",
             }}
           />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.3, color: T.text, textShadow: "2px 2px 0 rgba(0,0,0,0.65)" }}>
+        <div style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.3, color: invalid ? "#D8D8E2" : T.text, textShadow: "2px 2px 0 rgba(0,0,0,0.65)" }}>
           {vote.title}
         </div>
         <div style={{
           padding: "3px 8px", borderRadius: 3, fontSize: 10, fontWeight: 900,
-          background: active ? "rgba(54,255,77,0.08)" : T.card2,
-          color: active ? T.accent : T.muted,
-          border: `2px solid ${active ? T.accent : T.border}`,
+          background: statusBackground,
+          color: statusColor,
+          border: `2px solid ${statusBorder}`,
           whiteSpace: "nowrap", flexShrink: 0
         }}>
-          {active ? "진행중" : "종료"}
+          {statusLabel}
         </div>
       </div>
 
@@ -170,43 +179,27 @@ export function VoteCard({ vote, onClick, userEmail }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, margin: "-1px 6px 8px 52px", position: "relative", zIndex: 2 }}>
         <div style={{
           padding: "8px 12px", borderRadius: 2, fontSize: 13, fontWeight: 900,
-          textAlign: "center", background: "rgba(0,255,234,0.08)", color: T.primary,
-          border: `2px solid ${T.primary}`, boxShadow: "inset 0 0 14px rgba(0,255,234,0.16)"
+          textAlign: "center", background: invalid ? "rgba(168,168,184,0.08)" : "rgba(0,255,234,0.08)", color: invalid ? "#A8A8B8" : T.primary,
+          border: `2px solid ${invalid ? "rgba(168,168,184,0.58)" : T.primary}`, boxShadow: invalid ? "inset 0 0 14px rgba(168,168,184,0.08)" : "inset 0 0 14px rgba(0,255,234,0.16)"
         }}>
           A. {vote.optA}
         </div>
         <div style={{
           padding: "8px 12px", borderRadius: 2, fontSize: 13, fontWeight: 900,
-          textAlign: "center", background: "rgba(255,43,214,0.08)", color: T.danger,
-          border: `2px solid ${T.danger}`, boxShadow: "inset 0 0 14px rgba(255,43,214,0.18)"
+          textAlign: "center", background: invalid ? "rgba(168,168,184,0.08)" : "rgba(255,43,214,0.08)", color: invalid ? "#A8A8B8" : T.danger,
+          border: `2px solid ${invalid ? "rgba(168,168,184,0.58)" : T.danger}`, boxShadow: invalid ? "inset 0 0 14px rgba(168,168,184,0.08)" : "inset 0 0 14px rgba(255,43,214,0.18)"
         }}>
           B. {vote.optB}
         </div>
       </div>
 
-      {/* 참여했거나 종료된 투표라면 득표율 게이지 표시 */}
-      {vote.hasDetailedStats && (vote.resultsVisible || joined || vote.status === "closed") && (
-        <div style={{ marginBottom: 7, position: "relative", zIndex: 2 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.text2, marginBottom: 3 }}>
-            <span style={{ color: T.primary }}>{ra}%</span>
-            <span style={{ color: T.danger, marginLeft: "auto" }}>{100 - ra}%</span>
-          </div>
-          <div style={{ height: 9, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `3px solid ${T.border}` }}>
-            <div style={{ 
-              height: "100%", width: `${ra}%`, 
-              background: T.primary, 
-              borderRadius: T.radiusSm, transition: "width .8s steps(8, end)" 
-            }} />
-          </div>
-        </div>
-      )}
-
       {/* 하단: 참여자 수, 시간, 참여 여부 정보 */}
       <div style={{ display: "flex", gap: 13, fontSize: 12, color: T.text2, flexWrap: "wrap", alignItems: "center", fontWeight: 800, marginLeft: 52, lineHeight: 1, position: "relative", zIndex: 2 }}>
-        <span><span style={{ color: T.primary }}>♙ {(vote.votesA + vote.votesB).toLocaleString()}</span>명</span>
+        <span><span style={{ color: metaColor }}>♙ {(vote.votesA + vote.votesB).toLocaleString()}</span>명</span>
         {active && <span><span style={{ color: T.primary }}>◷</span> {timeLeft(vote.expiresAt)}</span>}
-        <span><span style={{ color: T.primary }}>●</span> {timeAgo(vote.createdAt)}</span>
+        <span><span style={{ color: metaColor }}>●</span> {timeAgo(vote.createdAt)}</span>
         {joined && <span style={{ color: T.primary, fontWeight: 700 }}>✓ 참여함</span>}
+        {invalid && <span style={{ color: "#A8A8B8", fontWeight: 900 }}>무효 처리됨</span>}
       </div>
     </div>
   );

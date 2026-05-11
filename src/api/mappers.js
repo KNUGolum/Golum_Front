@@ -8,6 +8,7 @@ export function mapUser(apiUser) {
 }
 
 export function mapStatus(apiStatus) {
+  if (apiStatus === "INVALID") return "invalid";
   return apiStatus === "ONGOING" || apiStatus === "ACTIVE" ? "active" : "closed";
 }
 
@@ -27,7 +28,11 @@ function mapSelection(selection, optionA = {}, optionB = {}) {
 }
 
 export function mapPollListItem(apiPoll) {
-  const status = mapStatus(apiPoll.status);
+  const mappedStatus = mapStatus(apiPoll.status);
+  const totalVotes = apiPoll.totalVotes ?? apiPoll.total_votes ?? 0;
+  const status = mappedStatus === "invalid" || (mappedStatus === "closed" && totalVotes === 0)
+    ? "invalid"
+    : mappedStatus;
   const choice = mapSelection(apiPoll.mySelection ?? apiPoll.my_selection);
   return {
     id: apiPoll.pollId ?? apiPoll.id,
@@ -44,15 +49,15 @@ export function mapPollListItem(apiPoll) {
     status,
     winner: null,
     votesA: 0,
-    votesB: apiPoll.totalVotes ?? 0,
+    votesB: totalVotes,
     totalBetA: 0,
     totalBetB: 0,
     hasVoted: !!apiPoll.hasVoted,
     hasBet: !!apiPoll.hasBet,
     isCreator: !!apiPoll.isCreator,
     resultsVisible: apiPoll.resultsVisible,
-    canVote: !!apiPoll.canVote,
-    canBet: !!apiPoll.canBet,
+    canVote: status === "invalid" ? false : !!apiPoll.canVote,
+    canBet: status === "invalid" ? false : !!apiPoll.canBet,
     mySelection: choice,
     hasDetailedStats: false,
   };
@@ -63,15 +68,19 @@ export function mapPollDetail(apiPoll, userEmail) {
   const optionB = apiPoll.options?.[1] || {};
   const optionAId = optionA.id ?? optionA.optionId ?? optionA.option_id;
   const optionBId = optionB.id ?? optionB.optionId ?? optionB.option_id;
+  const votesA = optionA.voteCount ?? optionA.vote_count ?? 0;
+  const votesB = optionB.voteCount ?? optionB.vote_count ?? 0;
   const rawSelection = apiPoll.mySelection ?? apiPoll.my_selection;
   const choice = mapSelection(rawSelection, optionA, optionB);
   const selectedOptionId = choice === "A" ? optionAId : choice === "B" ? optionBId : rawSelection;
-  const winner =
+  const mappedStatus = mapStatus(apiPoll.status);
+  const invalid = mappedStatus === "invalid" || (mappedStatus === "closed" && votesA === 0 && votesB === 0);
+  const winner = invalid ? null :
     apiPoll.isDraw ? "draw" :
     (apiPoll.winnerOptionId ?? apiPoll.winner_option_id) === optionAId ? "A" :
     (apiPoll.winnerOptionId ?? apiPoll.winner_option_id) === optionBId ? "B" :
     null;
-  const status = mapStatus(apiPoll.status);
+  const status = invalid ? "invalid" : mappedStatus;
 
   return {
     id: apiPoll.id ?? apiPoll.pollId,
@@ -92,13 +101,13 @@ export function mapPollDetail(apiPoll, userEmail) {
       : [],
     status,
     winner,
-    votesA: optionA.voteCount ?? optionA.vote_count ?? 0,
-    votesB: optionB.voteCount ?? optionB.vote_count ?? 0,
+    votesA,
+    votesB,
     totalBetA: optionA.betCredits ?? optionA.bet_credits ?? 0,
     totalBetB: optionB.betCredits ?? optionB.bet_credits ?? 0,
     resultsVisible: apiPoll.resultsVisible,
-    canVote: apiPoll.canVote,
-    canBet: apiPoll.canBet,
+    canVote: invalid ? false : apiPoll.canVote,
+    canBet: invalid ? false : apiPoll.canBet,
     hasVoted: !!apiPoll.hasVoted,
     hasBet: !!apiPoll.hasBet,
     isCreator: !!apiPoll.isCreator,

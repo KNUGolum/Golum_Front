@@ -16,8 +16,13 @@ export function VoteDetailPage({ vote, user, onVoted, onBetSkip, nav }) {
   const myP = vote.hasVoted ? { email: user.email, choice: vote.mySelection } : vote.participants.find(p => p.email === user.email); // 내 투표 기록
   const myB = vote.hasBet ? { email: user.email, choice: vote.mySelection } : vote.bets.find(b => b.email === user.email);         // 내 배팅 기록
   const active = vote.status === "active" && vote.expiresAt > now; // 진행 여부
-  const canSee = vote.resultsVisible ?? (!!myB || vote.status === "closed"); // 결과 공개 여부
+  const invalid = vote.status === "invalid";
+  const canSee = invalid || (vote.resultsVisible ?? (!!myB || vote.status === "closed")); // 결과 공개 여부
   const creator = vote.isCreator ?? vote.creator === user.email;                    // 내가 만든 투표인지 확인
+  const statusLabel = invalid ? "무효" : active ? "진행중" : "종료";
+  const statusColor = invalid ? "#A8A8B8" : active ? T.accent : T.muted;
+  const statusBackground = invalid ? "rgba(168,168,184,0.1)" : active ? "rgba(54,255,77,0.08)" : T.card2;
+  const statusBorder = invalid ? "rgba(168,168,184,0.68)" : active ? T.accent : T.border;
 
   // [통계 계산]
   const ra = rateA(vote);       // 투표율 (A진영 %)
@@ -67,8 +72,8 @@ export function VoteDetailPage({ vote, user, onVoted, onBetSkip, nav }) {
       {/* 헤더 영역: 제목 및 기본 정보 */}
       <ArcadePanel style={{ marginBottom: 14 }} innerStyle={{ padding: "6px 4px" }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-          <span style={{ padding: "3px 9px", borderRadius: 3, fontSize: 10, fontWeight: 900, background: active ? "rgba(54,255,77,0.08)" : T.card2, color: active ? T.accent : T.muted, border: `2px solid ${active ? T.accent : T.border}`, boxShadow: active ? "0 0 10px rgba(54,255,77,0.25)" : undefined }}>
-            {active ? "진행중" : "종료"}
+          <span style={{ padding: "3px 9px", borderRadius: 3, fontSize: 10, fontWeight: 900, background: statusBackground, color: statusColor, border: `2px solid ${statusBorder}`, boxShadow: active ? "0 0 10px rgba(54,255,77,0.25)" : undefined }}>
+            {statusLabel}
           </span>
           {active && <span style={{ fontSize: 12, color: T.text2, fontWeight: 700 }}>{timeLeft(vote.expiresAt)}</span>}
           {creator && <span style={{ padding: "2px 9px", borderRadius: T.radiusSm, fontSize: 10, fontWeight: 700, background: T.gold, color: "#050017", border: `2px solid ${T.primary}` }}>내가 만든 투표</span>}
@@ -139,34 +144,44 @@ export function VoteDetailPage({ vote, user, onVoted, onBetSkip, nav }) {
         <div style={{ fontSize: 12, fontWeight: 700, color: T.primary, marginBottom: 12, textTransform: "uppercase", letterSpacing: 0 }}>REALTIME SCORE</div>
         {canSee ? (
           <>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 13, fontWeight: 700 }}>
-                <span style={{ color: T.primary }}>{vote.optA} {ra}%</span>
-                <span style={{ color: T.danger }}>{vote.optB} {100 - ra}%</span>
+            {invalid ? (
+              <div style={{ padding: 18, borderRadius: T.radiusSm, textAlign: "center", background: "rgba(168,168,184,0.08)", border: "3px solid rgba(168,168,184,0.68)", boxShadow: "inset 0 0 18px rgba(168,168,184,0.08)" }}>
+                <div style={{ fontSize: 10, color: T.text2, marginBottom: 3 }}>최종 결과</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#A8A8B8" }}>무효</div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>유효한 투표가 없어 무효 처리되었습니다.</div>
               </div>
-              <div style={{ height: 12, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `2px solid ${T.border}` }}>
-                <div style={{ height: "100%", width: `${ra}%`, background: T.primary, transition: "width .8s steps(8, end)", borderRadius: T.radiusSm }} />
-              </div>
-            </div>
-            {/* 배팅 현황 */}
-              <div style={{ borderTop: `3px solid ${T.border}`, paddingTop: 12 }}>
-              <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontWeight: 700 }}>배팅 크레딧 현황</div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 11, fontWeight: 900 }}>
-                <span style={{ color: T.primary }}>{vote.optA} {vote.totalBetA.toLocaleString()} C</span>
-                <span style={{ color: T.danger }}>{vote.totalBetB.toLocaleString()} C {vote.optB}</span>
-              </div>
-              <div style={{ height: 9, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `2px solid ${T.border}` }}>
-                <div style={{ height: "100%", width: `${bra}%`, background: T.accent, borderRadius: T.radiusSm }} />
-              </div>
-            </div>
-            {/* 최종 승자 표시 (종료된 경우만) */}
-            {vote.status === "closed" && vote.winner && (
-              <div style={{ marginTop: 12, padding: 14, borderRadius: T.radiusSm, textAlign: "center", background: vote.winner === "draw" ? T.accentDim : T.primaryDim, border: `3px solid ${vote.winner === "draw" ? T.accent : T.primary}` }}>
-                <div style={{ fontSize: 10, color: T.text2, marginBottom: 3 }}>🏆 최종 결과</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: vote.winner === "draw" ? T.accent : T.primary }}>
-                  {vote.winner === "draw" ? "무승부" : vote.winner === "A" ? `${vote.optA} 승리!` : `${vote.optB} 승리!`}
+            ) : (
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 13, fontWeight: 700 }}>
+                    <span style={{ color: T.primary }}>{vote.optA} {ra}%</span>
+                    <span style={{ color: T.danger }}>{vote.optB} {100 - ra}%</span>
+                  </div>
+                  <div style={{ height: 12, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `2px solid ${T.border}` }}>
+                    <div style={{ height: "100%", width: `${ra}%`, background: T.primary, transition: "width .8s steps(8, end)", borderRadius: T.radiusSm }} />
+                  </div>
                 </div>
-              </div>
+                {/* 배팅 현황 */}
+                  <div style={{ borderTop: `3px solid ${T.border}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, color: T.text2, marginBottom: 6, fontWeight: 700 }}>배팅 크레딧 현황</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 11, fontWeight: 900 }}>
+                    <span style={{ color: T.primary }}>{vote.optA} {vote.totalBetA.toLocaleString()} C</span>
+                    <span style={{ color: T.danger }}>{vote.totalBetB.toLocaleString()} C {vote.optB}</span>
+                  </div>
+                  <div style={{ height: 9, background: T.bg2, borderRadius: T.radiusSm, overflow: "hidden", border: `2px solid ${T.border}` }}>
+                    <div style={{ height: "100%", width: `${bra}%`, background: T.accent, borderRadius: T.radiusSm }} />
+                  </div>
+                </div>
+                {/* 최종 승자 표시 (종료된 경우만) */}
+                {vote.status === "closed" && vote.winner && (
+                  <div style={{ marginTop: 12, padding: 14, borderRadius: T.radiusSm, textAlign: "center", background: vote.winner === "draw" ? T.accentDim : T.primaryDim, border: `3px solid ${vote.winner === "draw" ? T.accent : T.primary}` }}>
+                    <div style={{ fontSize: 10, color: T.text2, marginBottom: 3 }}>🏆 최종 결과</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: vote.winner === "draw" ? T.accent : T.primary }}>
+                      {vote.winner === "draw" ? "무승부" : vote.winner === "A" ? `${vote.optA} 승리!` : `${vote.optB} 승리!`}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (
