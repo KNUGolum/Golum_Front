@@ -24,9 +24,7 @@ export const pollsApi = {
 
     return {
       ...data,
-      polls: filter === "mine"
-        ? polls.filter((poll) => poll.hasVoted && !poll.isCreator)
-        : polls,
+      polls,
     };
   },
 

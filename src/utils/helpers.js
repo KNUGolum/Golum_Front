@@ -1,5 +1,6 @@
 // src/utils/helpers.js
 export const timeAgo = (ts) => {
+  if (!Number.isFinite(ts)) return "";
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return "방금 전";
   if (s < 3600) return `${Math.floor(s / 60)}분 전`;
@@ -8,6 +9,7 @@ export const timeAgo = (ts) => {
 };
 
 export const timeLeft = (exp) => {
+  if (!Number.isFinite(exp)) return "";
   const ms = exp - Date.now();
   if (ms <= 0) return "종료됨";
   const h = Math.floor(ms / 3600000);

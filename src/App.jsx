@@ -47,9 +47,18 @@ export default function App() {
   async function loadVoteDetail(voteId, nextUser = user) {
     if (!nextUser) return null;
     const detail = await pollsApi.detail(voteId, nextUser.email);
-    setCurrentVote(detail);
-    setVotes((prev) => prev.map((v) => (v.id === detail.id ? { ...v, ...detail } : v)));
-    return detail;
+    const existingVote = votes.find((v) => v.id === detail.id);
+    const stableDetail = {
+      ...detail,
+      createdAt: detail.createdAt ?? existingVote?.createdAt ?? currentVote?.createdAt,
+    };
+    setCurrentVote(stableDetail);
+    setVotes((prev) => prev.map((v) => (
+      v.id === stableDetail.id
+        ? { ...v, ...stableDetail, createdAt: stableDetail.createdAt ?? v.createdAt }
+        : v
+    )));
+    return stableDetail;
   }
 
   // [로직] 페이지 이동 함수 (nav)
@@ -91,8 +100,12 @@ export default function App() {
   }
 
   async function handleBet(amount) {
+    const selection = currentVote.mySelection;
+    if (selection !== "A" && selection !== "B") {
+      throw new Error("배팅 선택 정보를 불러오지 못했습니다. 투표 상세를 다시 열어주세요.");
+    }
     await betsApi.bet(currentVote.id, {
-      optionId: currentVote.mySelection,
+      optionId: selection,
       amount,
     });
     const nextUser = await refreshMe();
