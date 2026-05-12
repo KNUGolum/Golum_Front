@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8002/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8002/api";
 const TOKEN_STORAGE_KEY = "golum_tokens";
 
 let tokens = readStoredTokens();
@@ -27,6 +27,14 @@ export function setTokens(nextTokens) {
 
 export function clearTokens() {
   setTokens(null);
+}
+
+export function getWebSocketUrl(userId) {
+  const apiUrl = new URL(API_BASE_URL, window.location.origin);
+  apiUrl.protocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
+  apiUrl.pathname = `${apiUrl.pathname.replace(/\/$/, "")}/ws/${userId}`;
+  apiUrl.search = "";
+  return apiUrl.toString();
 }
 
 export async function apiRequest(path, options = {}) {

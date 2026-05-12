@@ -1,11 +1,11 @@
 // src/App.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { T } from "./styles/theme";
-import { ToastProvider } from "./context/ToastContext";
+import { ToastProvider, useToast } from "./context/ToastContext";
 import backgroundImage from "./assets/Background.png";
 import { authApi } from "./api/auth";
 import { betsApi } from "./api/bets";
-import { clearTokens, getTokens } from "./api/client";
+import { clearTokens, getTokens, getWebSocketUrl } from "./api/client";
 import { pollsApi } from "./api/polls";
 
 // 페이지 컴포넌트들 불러오기
@@ -20,6 +20,14 @@ import { NavBar } from "./components/layout/NavBar";
 import { BattleBackgroundCharacters } from "./components/layout/BattleBackgroundCharacters";
 
 export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}
+
+function AppContent() {
   // --- 전역 상태 관리 ---
   const [page, setPage] = useState("auth");    // 현재 보여줄 페이지 관리
   const [user, setUser] = useState(null);      // 로그인한 유저 정보
@@ -27,6 +35,10 @@ export default function App() {
   const [currentVote, setCurrentVote] = useState(null);
   const [filter, setFilter] = useState("active");
   const [loadingList, setLoadingList] = useState(false);
+  const toast = useToast();
+  const userRef = useRef(null);
+  const filterRef = useRef(filter);
+  const currentVoteRef = useRef(null);
 
   async function refreshMe() {
     const nextUser = await authApi.me();
@@ -142,8 +154,113 @@ export default function App() {
       });
   }, []);
 
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    filterRef.current = filter;
+  }, [filter]);
+
+  useEffect(() => {
+    currentVoteRef.current = currentVote;
+  }, [currentVote]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let socket = null;
+    let reconnectTimer = null;
+    let closedByCleanup = false;
+
+    const handleRealtimeMessage = (event) => {
+      let message;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (message.type === "POLL_END") {
+        toast(message.message || "투표가 종료되었습니다.", "info");
+        loadVotes(filterRef.current).catch(() => {});
+        if (currentVoteRef.current?.id === message.pollId) {
+          loadVoteDetail(message.pollId).catch(() => {});
+        }
+      }
+
+      if (message.type === "PAYOUT_COMPLETE") {
+        const amount = message.amount ?? 0;
+        toast(message.message || `${amount} 크레딧이 정산되었습니다.`, "gold");
+        refreshMe().catch(() => {});
+        loadVotes(filterRef.current).catch(() => {});
+        if (currentVoteRef.current?.id === message.pollId) {
+          loadVoteDetail(message.pollId).catch(() => {});
+        }
+      }
+    };
+
+    const connect = () => {
+      socket = new WebSocket(getWebSocketUrl(user.id));
+      socket.onmessage = handleRealtimeMessage;
+      socket.onerror = () => {
+        socket?.close();
+      };
+      socket.onclose = () => {
+        if (closedByCleanup) return;
+        reconnectTimer = window.setTimeout(connect, 2000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      closedByCleanup = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      socket?.close();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        const previousCredits = userRef.current?.credits;
+        const nextUser = await authApi.me();
+        setUser(nextUser);
+
+        if (
+          typeof previousCredits === "number" &&
+          nextUser.credits > previousCredits
+        ) {
+          toast(`정산으로 ${nextUser.credits - previousCredits} 크레딧이 지급되었습니다.`, "gold");
+        }
+
+        const data = await pollsApi.list({ filter: filterRef.current });
+        setVotes(data.polls);
+
+        const openedVoteId = currentVoteRef.current?.id;
+        if (openedVoteId) {
+          const detail = await pollsApi.detail(openedVoteId, nextUser.email);
+          setCurrentVote((prev) => ({
+            ...detail,
+            createdAt: detail.createdAt ?? prev?.createdAt,
+          }));
+        }
+      } catch {
+        // Keep the app usable if a transient refresh fails.
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [user?.id, toast]);
+
   return (
-    <ToastProvider>
+    <>
       {/* 전역 스타일 설정 (Reset 및 애니메이션) */}
       <style>{`
         @font-face {
@@ -268,6 +385,6 @@ export default function App() {
           )
         )}
       </div>
-    </ToastProvider>
+    </>
   );
 }
