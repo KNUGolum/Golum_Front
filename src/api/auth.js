@@ -35,4 +35,11 @@ export const authApi = {
   async me() {
     return mapUser(await apiRequest("/auth/me"));
   },
+
+  async updateNickname(nickname) {
+    return mapUser(await apiRequest("/auth/nickname", {
+      method: "PUT",
+      body: JSON.stringify({ nickname }),
+    }));
+  },
 };

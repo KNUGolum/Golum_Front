@@ -14,6 +14,8 @@ import { HomePage } from "./pages/HomePage";
 import { VoteDetailPage } from "./pages/VoteDetailPage";
 import { BettingPage } from "./pages/BettingPage";
 import { CreateVotePage } from "./pages/CreateVotePage";
+import { TitleStorePage } from "./pages/TitleStorePage";
+import { ActivityLogsPage } from "./pages/ActivityLogsPage";
 
 // 레이아웃 컴포넌트 불러오기
 import { NavBar } from "./components/layout/NavBar";
@@ -35,6 +37,7 @@ function AppContent() {
   const [currentVote, setCurrentVote] = useState(null);
   const [filter, setFilter] = useState("active");
   const [loadingList, setLoadingList] = useState(false);
+  const [titleRefreshKey, setTitleRefreshKey] = useState(0);
   const toast = useToast();
   const userRef = useRef(null);
   const filterRef = useRef(filter);
@@ -339,7 +342,13 @@ function AppContent() {
           // 2. 인증된 유저에게는 네비게이션 바와 각 페이지 표시
           user && (
             <>
-              <NavBar user={user} nav={nav} logout={handleLogout} />
+              <NavBar
+                user={user}
+                nav={nav}
+                logout={handleLogout}
+                onNicknameChanged={refreshMe}
+                titleRefreshKey={titleRefreshKey}
+              />
               
               <main style={{ minHeight: "calc(100vh - 56px)" }}>
                 {page === "home" && (
@@ -378,6 +387,21 @@ function AppContent() {
                     user={user} 
                     onCreated={handleCreated}
                     nav={nav} 
+                  />
+                )}
+
+                {page === "titles" && (
+                  <TitleStorePage
+                    user={user}
+                    onRefreshUser={refreshMe}
+                    onTitleChanged={() => setTitleRefreshKey((key) => key + 1)}
+                  />
+                )}
+
+                {page === "logs" && (
+                  <ActivityLogsPage
+                    user={user}
+                    nav={nav}
                   />
                 )}
               </main>
